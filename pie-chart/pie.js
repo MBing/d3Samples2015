@@ -7,6 +7,10 @@
                 });
 
     var manually = function (data, x, y) {
+        data = data.sort(function (a, b) {
+            return d3.descending(a.value, b.value);
+        });
+
         var colors = d3.scale.category20c(),
             total  = d3.sum(data.map(function (d) {
                 return d.value;
@@ -43,5 +47,10 @@
 
     d3.json('ufo-types.json', function (data) {
         manually(data, 300, 250);
+
+        $('svg path').tooltip({
+            container: 'body',
+            placement: 'right'
+        });
     })
 })();
