@@ -6,39 +6,42 @@ d3.layout.angle_histogram = function () {
         startAngle = 0,
         endAngle = 2 * Math.PI;
 
-    function angle_histogram(data, i) {
+    function angle_histogram (data, i) {
         var binned = histogram.call(this, data, i),
-            _startAngle = typeof startAngle === 'function' ? startAngle.apply(this, arguments) : startAngle,
-            _endAngle = typeof endAngle === 'function' ? endAngle.apply(this, arguments) : endAngle,
+            _startAngle = typeof startAngle === 'function' 
+                ? startAngle.apply(this, arguments) 
+                : startAngle,
+            _endAngle = typeof endAngle === 'function' 
+                ? endAngle.apply(this, arguments) 
+                : endAngle,
 
             radians = d3.scale.linear()
                 .domain([0, d3.max(binned.map(function (d) { return d.x; }))])
                 .range([_startAngle, _endAngle]);
 
-        binned = binned.map(function (d) {
-            d.innerRadius = typeof innerRadius === 'function' ? innerRadius(d, i) : innerRadius;
+        maxHeight.domain([typeof minHeight === 'function' 
+        ? minHeight(d3.min(binned.map(function (d) {
+                return d.y;
+            })))
+        : minHeight
+            , d3.max(binned.map(function (d) {
+                    return d.y;
+            }))
+        ]);
+        
+        binned = binned.map(function (d, i) {
+            d.innerRadius = typeof innerRadius === 'function'
+            ? innerRadius(d, i)
+            : innerRadius;
+            
             d.value = histogram.value()(d[0]);
-            d.outerRadius = d.innerRadius + d.y;
+            // d.outerRadius = d.innerRadius + d.y;
             d.startAngle = radians(d.x) - radians(d.dx / 2);
             d.endAngle = radians(d.x) + radians(d.dx / 2);
-
-            return d;
-        });
-
-        maxHeight.domain([typeof minHeight === 'function' ? minHeight(d3.min(binned.map(
-            function (d) {
-                return d.y;
-            }
-        ))) : minHeight
-            , d3.max(binned.map(function (d) {
-            return d.y;
-        }))]);
-
-        binned = binned.map(function (d) {
             d.outerRadius = d.innerRadius + maxHeight(d.y);
 
             return d;
-        })
+        });
 
         return binned;
     }
@@ -55,6 +58,8 @@ d3.layout.angle_histogram = function () {
         if (!arguments.length) {
             return innerRadius;
         };
+
+        innerRadius = x;
 
         return angle_histogram;
     };

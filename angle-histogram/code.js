@@ -3,7 +3,7 @@
                 .append('svg')
                 .style({
                     width: '100%',
-                    height: 500
+                    height: 1024
                 });
     
     var parseTimes = function(data) {
@@ -20,9 +20,9 @@
     }
 
     var basicLayout = function (data, x, y) {
-        data = data.sort(function (a, b) {
-            return d3.descending(a.value, b.value);
-        });
+        // data = data.sort(function (a, b) {
+        //     return d3.descending(a.value, b.value);
+        // });
 
         var gradient = d3.scale.linear()
             .range(
@@ -100,7 +100,7 @@
             })
             .bins(24)
             .innerRadius(150)
-            .maxHeight(d3.scale.log().range([0, 200]))
+            .maxHeight(d3.scale.log().range([0, 600]))
             .minHeight(function (min_val) {
                 return min_val / 2;
             });
