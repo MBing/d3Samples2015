@@ -30,12 +30,13 @@
         console.log('fetching', state.state);
 
         d3.html(state.link, function (fragment) {
+            console.log(fragment);
             var timeFormatter = d3.time.format('%m/%d/%y %H:%M'),
                 postedFormatter = d3.time.format('%m/%d/%y'),
                 thisYear = (new Date()).getFullYear();
 
             state.data = Array.prototype.map.call(
-                fragment.querySelectorAll('body tr'),
+                fragment.querySelectorAll('tbody tr'),
                 function (row) {
                     var cells = row.querySelectorAll('td'),
                         parsed = {};
@@ -71,13 +72,15 @@
         });
     };
 
-    d3.html('./state-index.html', function (fragment) {
-        var index = parseIndex(fragment);
+    d3.html('state-index.html', function (fragment) {
+        var index = parseIndex(fragment),
+            start = new Date();
 
         async.map(index, fetchState, function (err, data) {
             var timeFormatter = d3.time.format('%x %H:%M'),
                 postedFormatter = d3.time.format('%x');
 
+            start = new Date();
             data = data.map(function (datum) {
                 return datum.data.map(function (datum) {
                     datum.time = timeFormatter(datum.time);
