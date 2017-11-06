@@ -1,5 +1,4 @@
 (function () {
-    
         var width = 960,
             height = 600;
     
@@ -16,12 +15,12 @@
                     .projection(projection);
 
         queue()
-            .defer(d3.json, './data/us.json')
-            .defer(d3.json, "data/states-hash.json")
-            .defer(d3.csv, "data/state-populations.csv")
-            .defer(d3.json, "data/city-populations.json")
-            .defer(d3.xml, "data/military-bases.kml")
-            .defer(d3.csv, "data/full-data-geodata.csv")
+            .defer(d3.json, 'data/us.json')
+            .defer(d3.json, 'data/states-hash.json')
+            .defer(d3.csv, 'data/state-populations.csv')
+            .defer(d3.json, 'data/city-populations.json')
+            .defer(d3.xml, 'data/military-bases.kml')
+            .defer(d3.csv, 'data/full-data-geodata.csv')
             .await(function (err, US, statesHash, populations, cityPopulations, militaryBases, _ufos) {
                 _ufos = prepare.filterUfos(_ufos);
                 var ufos = prepare.ufos(_ufos);
@@ -42,28 +41,37 @@
                                 .attr('class', 'states')
                                 .selectAll('g')
                                 .data(topojson.feature(US, US.objects.states).features)
-                                .enter()
-                                .append('g');
+                                .enter();
 
                 states.append('path')
                     .attr('d', path)
-                    .attr("class", function(d) { 
+                    .attr('class', function(d) { 
                         return quantize(ufoCounts[stateIdMap.get(d.id)]); 
                     });
                 
-                svg.append("path")
-                    .datum(topojson.mesh(US, US.objects.states, 
-                                         function(a, b) { return a !== b; }))
-                    .attr("class", "borders")
-                    .attr("d", path);
+                svg.append('path')
+                    .datum(topojson
+                        .mesh(US, US.objects.states, 
+                            function(a, b) {
+                                return a !== b;
+                            }
+                        )
+                    )
+                    .attr('class', 'borders')
+                    .attr('d', path);
 
-                var positions = _ufos
-                        .map(function (d) {
-                            return projection([d.lon, d.lat]);
-                        })
-                        .filter(function (d) {
-                            return !!d;
-                        });
+                /* Replace the data in the circle svg 'clusters.centroids' with 'positions' and you will see all
+                * the exact positions, since we find clustered positions more useful, we use clusters
+                * to visualise our data.
+                */
+
+                // var positions = _ufos
+                //         .map(function (d) {
+                //             return projection([d.lon, d.lat]);
+                //         })
+                //         .filter(function (d) {
+                //             return !!d;
+                //         });
 
                 var tmp = clusteredUfos(_ufos, projection),
                     clustered = tmp[0],
@@ -98,7 +106,7 @@
 
                 svg.append('g')
                         .selectAll('circle')
-                        .data(positions)
+                        .data(clusters.centroids)
                         .enter()
                         .append('circle')
                         .attr({
@@ -108,7 +116,9 @@
                             cy: function (d) {
                                 return d[1];
                             },
-                            r: 1,
+                            r: function (d, i) {
+                                return R(ratios[i]);
+                            },
                             class: 'point'
                         })
             })
