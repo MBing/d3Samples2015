@@ -13,10 +13,7 @@
                     .translate([width / 2, height / 2]),
             path = d3.geo
                     .path()
-                    .projection(projection),
-            stateIdMap = d3.map({
-
-            });
+                    .projection(projection);
 
         queue()
             .defer(d3.json, './data/us.json')
@@ -49,7 +46,10 @@
                                 .append('g');
 
                 states.append('path')
-                    .attr('d', path);
+                    .attr('d', path)
+                    .attr("class", function(d) { 
+                        return quantize(ufoCounts[stateIdMap.get(d.id)]); 
+                    });
                 
                 svg.append("path")
                     .datum(topojson.mesh(US, US.objects.states, 
@@ -64,7 +64,38 @@
                         .filter(function (d) {
                             return !!d;
                         });
-                
+
+                var tmp = clusteredUfos(_ufos, projection),
+                    clustered = tmp[0],
+                    clusters = tmp[1],
+                    clusterPopulations = prepare.clusterPopulations(clustered, cityPopulations);
+
+                var ratios = _.mapValues(clustered,
+                                    function (group, key) {
+                                        var population = clusterPopulations[key];
+
+                                        if (population === 0) {
+                                            return 0;
+                                        }
+
+                                        return group.length / population;
+                                    }),
+                    R = d3.scale.linear()
+                                .domain([0, d3.max(_.values(ratios))])
+                                .range([2, 20]),
+                    basePositions = prepare.basePositions(militaryBases, projection);
+                    
+                svg.append('g')
+                    .selectAll('path')
+                    .data(basePositions)
+                    .enter()
+                    .append('path')
+                    .attr('d', d3.svg.symbol().type('cross').size(32))
+                    .attr('class', 'base')
+                    .attr('transform', function (d) {
+                        return 'translate(' + d[0] + ',' + d[1] + ')';
+                    });
+
                 svg.append('g')
                         .selectAll('circle')
                         .data(positions)

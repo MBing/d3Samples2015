@@ -95,5 +95,72 @@ var stateIdMap = d3.map({
                 })
             ));
         },
+
+        clusterPopulations: function (clustered, cityPopulations) {
+            return _.mapValues(clustered, function (cluster) {
+                var populations = cluster.map(function (d) {
+                    return {city: d.label.toLowerCase(),
+                            population: cityPopulations[d.label.toLowerCase()] || 0};
+                });
+
+                return _.uniq(populations, function (d) {
+                    return d.city; 
+                })
+                .reduce(function (sum, d) {
+                    return sum+Number(d.population);
+                }, 0);
+            })
+        },
+
+        basePositions: function (militaryBases, projection) {
+            return _.map(
+                militaryBases.getElementsByTagName('Placemark'), function (d) {
+                    var point = _.find(d.children,
+                                    function (node) {
+                                        return node.nodeName === 'Point';
+                                    }).textContent.split(',');
+                    var icon = _.find(d.children,
+                                    function (node) {
+                                        return node.nodeName === 'Style';
+                                    });
+                    if (icon.innerHTML.indexOf('force-icons.png') < 1
+                                    && icon.innerHTML.indexOf('navy-icons.png') < 1) {
+                                        return null;
+                                    }
+
+                                    return projection([Number(point[0]), Number(point[1])]);
+                }
+            )
+            .filter(function (d) {
+                return !!d;
+            });
+        }
+    };
+
+    var clusteredUfos = function (ufos, projection) {
+        var labels = [],
+            vectors = [];
+
+        ufos
+            .map(function (d) { 
+                return {
+                    label: [d.city, d.state].join(', '),
+                    vector: projection([d.lon, d.lat])};
+            })
+            .filter(function (d) {
+                return !!d.vector;
+            })
+            .forEach(function (d) {
+                labels.push(d.label);
+                vectors.push(d.vector);
+            });
+        var clusters = figue.kmeans(120, vectors);
+        var clustered = _.groupBy(clusters.assignments.map(function (cluster, i) {
+            return {
+                label: labels[i],
+                cluster: cluster
+            };
+        }), 'cluster');
         
+            return [clustered, clusters];
     };
