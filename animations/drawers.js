@@ -82,6 +82,29 @@ var Drawers = function (svg, ufos, populations, geoPath, geoProjection) {
                     },
                     class: 'point'
                 })
-        }
+        },
+        ufos_by_season: function (ufos, cluster_assignments) {
+            var format = d3.time.format('%m/%d/%Y %H:%M'),
+                seasons = d3.scale.ordinal()
+                    .domain(d3.range(12))
+                    .range(["winter", "winter", 
+                            "spring", "spring", "spring", 
+                            "summer", "summer", "summer", 
+                            "autumn", "autumn", "autumn", 
+                            "winter"]);
+    
+            ufos = ufos.map(function (ufo, i) {
+                ufo.cluster = cluster_assignments[i];
+                return ufo;
+            });
+    
+            return _.groupBy(ufos,
+                             function (ufo) {
+                                 var d = format.parse(ufo.time),
+                                     year = d.getMonth() === 11 ? d.getFullYear()+1 : d.getFullYear();
+                                 
+                                 return year + '-' + seasons(d.getMonth());
+                             });
+        },
     };
 };
