@@ -36,7 +36,44 @@
                 drawers.map(US, geoPath, states);
                 drawers.bases(militaryBases, geoProjection);
                 drawers.centroids(clusters.centroids, clustered, clusterPopulations);
-            })
+
+                var ufosBySeason = prepare.ufosBySeason(_ufos, clusters.assignments),
+                    seasons = d3.scale.ordinal()
+                        .domain(d3.range(4))
+                        .range(['winter', 'spring', 'summer', 'autumn']);
+                
+                var stepper = setInterval((function () {
+                    var step = 0,
+                        year = 1945;
+                    
+                    return function () {
+                        year = timelineStep (step++, year);
+                    };
+                })(),1000);
+
+                function timelineStep (step, year) {
+                    var season = seasons(step % 12);
+
+                    d3.select('h1.season')
+                        .html([season, year].join(' '));
+
+                    requestAnimationFrame(function () {
+                        drawers.placeUfos(ufosBySeason[
+                            [year, season].join('-')
+                        ]);
+                    });
+
+                    if (step % 4 === 3) {
+                        year += 1;
+                    }
+
+                    if (year > 2014) {
+                        clearInterval(stepper);
+                    }
+
+                    return year;
+                }
+            });
 
 
 })();

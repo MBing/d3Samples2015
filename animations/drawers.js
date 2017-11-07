@@ -83,28 +83,46 @@ var Drawers = function (svg, ufos, populations, geoPath, geoProjection) {
                     class: 'point'
                 })
         },
-        ufos_by_season: function (ufos, cluster_assignments) {
-            var format = d3.time.format('%m/%d/%Y %H:%M'),
-                seasons = d3.scale.ordinal()
-                    .domain(d3.range(12))
-                    .range(["winter", "winter", 
-                            "spring", "spring", "spring", 
-                            "summer", "summer", "summer", 
-                            "autumn", "autumn", "autumn", 
-                            "winter"]);
-    
-            ufos = ufos.map(function (ufo, i) {
-                ufo.cluster = cluster_assignments[i];
-                return ufo;
+
+        placeUfos: function (ufos) {
+            if (!ufos) return;
+
+            var format = d3.time.format("%m/%d/%Y %H:%M");
+            
+            ufos = _.sortBy(ufos, 
+                    function (ufo) { 
+                        return format.parse(ufo.time); 
+                    });
+
+            var positions = ufos.map(function (ufo) {
+                return geoProjection([Number(ufo.lon), Number(ufo.lat)]);
             });
-    
-            return _.groupBy(ufos,
-                             function (ufo) {
-                                 var d = format.parse(ufo.time),
-                                     year = d.getMonth() === 11 ? d.getFullYear()+1 : d.getFullYear();
-                                 
-                                 return year + '-' + seasons(d.getMonth());
-                             });
-        },
+
+            var circles = svg.append('g')
+                .selectAll('circle')
+                .data(positions)
+                .enter()
+                .append('circle')
+                .attr({
+                    cx: function (d) {
+                        return d[0];
+                    },
+                    cy: function (d) {
+                        return d[1];
+                    },
+                    r: 2,
+                    class: 'point'
+                })
+                .style('visibility', 'hidden');
+
+            d3.timer((function (i) {
+                return function () {
+                    d3.select(circles[0][i++])
+                        .style('visibility', 'visible');
+
+                    return i >= circles.size();
+                };
+            })(0));
+        }
     };
 };
