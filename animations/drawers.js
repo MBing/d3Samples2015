@@ -65,22 +65,48 @@ var Drawers = function (svg, ufos, populations, geoPath, geoProjection) {
                             .domain([0, d3.max(_.values(ratios))])
                             .range([2, 20]);
 
+            var ufoCount = _.values(clustered)
+                            .reduce(function (sum, group) {
+                                return sum + group.length;
+                            }, 0);
+
+            centroids = (centroids.map(function (pos, i) {
+                return {
+                    x: pos[0],
+                    y: pos[1],
+                    maxR: R(ratios[i]),
+                    allHere: clustered[i].length,
+                    absAll: ufoCount,
+                    population: clusterPopulations[i],
+                    count: 0
+                };
+            }))
             svg.append('g')
+                .attr('class', 'centroids')
+                .datum(
+                    {
+                        type: 'centroids'
+                    }
+                )
                 .selectAll('circle')
                 .data(centroids)
                 .enter()
                 .append('circle')
                 .attr({
                     cx: function (d) {
-                        return d[0];
+                        return d.x;
                     },
                     cy: function (d) {
-                        return d[1];
+                        return d.y;
                     },
-                    r: function (d, i) {
-                        return R(ratios[i]);
-                    },
-                    class: 'point'
+                    // r: function (d, i) {
+                    //     return R(ratios[i]);
+                    // },
+                    r: 0,
+                    class: 'centroid',
+                    id: function (d, i) {
+                        return 'centroid';
+                    }
                 })
         },
 
@@ -98,29 +124,99 @@ var Drawers = function (svg, ufos, populations, geoPath, geoProjection) {
                 return geoProjection([Number(ufo.lon), Number(ufo.lat)]);
             });
 
-            var circles = svg.append('g')
-                .selectAll('circle')
-                .data(positions)
-                .enter()
-                .append('circle')
-                .attr({
-                    cx: function (d) {
-                        return d[0];
-                    },
-                    cy: function (d) {
-                        return d[1];
-                    },
-                    r: 2,
-                    class: 'point'
-                })
-                .style('visibility', 'hidden');
+            var fps = 60,
+                perFrame = Math.ceil(positions.length > fps
+                                        ? positions.length / fps
+                                        : 1);
 
-            d3.timer((function (i) {
-                return function () {
-                    d3.select(circles[0][i++])
-                        .style('visibility', 'visible');
+            d3.timer((function (counter) {
+                var previous = (new Date()).getTime();
+                return function draw () {
+                    var now = new Date().getTime(),
+                        delta = now - previous,
+                        frames = Math.ceil(delta / (1000 / fps));
 
-                    return i >= circles.size();
+                    var toDraw = {
+                        pos: positions.splice(0, perFrame * frames),
+                        ufos: ufos.splice(0, perFrame * frames)
+                    };
+
+                    var g = svg.append('g')
+                                .attr('class', 'points')
+                                .datum(
+                                    {
+                                        type: 'points'
+                                    }
+                                )
+                        drawn = g.selectAll('circle')
+                            .data(toDraw.pos)
+                            .enter()
+                            .append('circle')
+                            .attr({
+                                cx: function (d) {
+                                    return d[0];
+                                },
+                                cy: function (d) {
+                                    return d[1];
+                                },
+                                r: 2,
+                                class: 'point'
+                            }),
+                        centroids = d3.selectAll(toDraw.ufos.map(
+                            function (ufo) {
+                                return '#centroid-' + ufo.cluster;
+                            }
+                        ).join(', '));
+
+                    g.transition()
+                        .duration(800)
+                        .style("opacity", .3);
+
+                    centroids.each(function (d) {
+                        d.count += drawn.size();
+                        d3.select(this).datum(d);
+                    });
+
+                    var ratios = [],
+                        currentlyDrawn = 0;
+                    
+                    svg.selectAll('.centroid')
+                        .each(function (d) {
+                            currentlyDrawn += d.count;
+                        })
+                        .each(function (d) {
+                            if (d.population > 0) {
+                                ratios.push((d.count / d.population) / currentlyDrawn);
+                            } else {
+                                ratios.push(0);
+                            }
+                        });
+
+                    var R = d3.scale.linear()
+                        .domain([0, d3.max(ratios)])
+                        .range([0, 20]);
+
+                    svg.selectAll('.centroid')
+                        .transition()
+                        .duration(500)
+                        .attr('r', function (d) {
+                            if (d.population < 1) {
+                                return 0;
+                            }
+                            return R((d.count / d.population) / currentlyDrawn);
+                        })
+                        .ease(d3.ease('elastic-in'));
+
+                    svg.selectAll('g.centroids, g.points')
+                        .sort(function (a, b) {
+                            if (a.type == 'centroids') return 1;
+                            return -1;
+                        });
+
+                    counter += drawn.size;
+                    previous = now;
+
+                    return counter >= drawn.size();
                 };
             })(0));
         }
